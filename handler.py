@@ -2,40 +2,28 @@ import io
 import os
 import base64
 import tempfile
+import numpy as np
 import soundfile as sf
+import torch
 import runpod
 from voxcpm import VoxCPM
 
-print("1. Loading OpenBMB VoxCPM2 Model...")
-model = VoxCPM.from_pretrained("openbmb/VoxCPM2", load_denoiser=False)
-print("2. Running Quick Warmup so AI is pre-compiled...")
-try:
-    _ = model.generate(text="नमस्ते", cfg_value=2.0, inference_timesteps=2)
-    print("3. Warmup Done! System is Ready for 3-Second Speech Generation!")
-except Exception as e:
-    print("Warmup notice:", e)
+print("Loading OpenBMB VoxCPM2 Model...")
+# Clean Voice Model with Denoiser
+model = VoxCPM.from_pretrained("openbmb/VoxCPM2", load_denoiser=True)
+print("OpenBMB VoxCPM2 Ready!")
 
-# Pre-saved Audio Paths & Exact Prompts
 PRESETS = {
-    "voice1": {
-        "file": "/app/presets/long_kolhapuri.wav",
-        "prompt": "मेरे हौसले की उड़ान अब कम नहीं होगी, मेरे जिद की जिद खत्म नहीं होगी। अब पूरा हिंदुस्तान जीतूंगा सिकंदर बनकर। यह ऐलान-ए-जंग खुली आम होगा, पूरे इंडिया में, सरेआम होगा! एक दमदार प्रस्तुति के लिए तैयार हो जाइए।"
-    },
-    "voice2": {
-        "file": "/app/presets/competition_dialogue.mp3",
-        "prompt": "मेरे हौसले की उड़ान अब कम नहीं होगी, मेरे जिद की जिद खत्म नहीं होगी। अब पूरा हिंदुस्तान जीतूंगा सिकंदर बनकर। यह ऐलान-ए-जंग खुली आम होगा, पूरे इंडिया में, सरेआम होगा! एक दमदार प्रस्तुति के लिए तैयार हो जाइए।"
-    },
-    "voice3": {
-        "file": "/app/presets/competition_voice.mp3",
-        "prompt": "मेरे हौसले की उड़ान अब कम नहीं होगी, मेरे जिद की जिद खत्म नहीं होगी। अब पूरा हिंदुस्तान जीतूंगा सिकंदर बनकर। यह ऐलान-ए-जंग खुली आम होगा, पूरे इंडिया में, सरेआम होगा! एक दमदार प्रस्तुति के लिए तैयार हो जाइए।"
-    }
+    "voice1": "/app/presets/long_kolhapuri.wav",
+    "voice2": "/app/presets/competition_dialogue.mp3",
+    "voice3": "/app/presets/competition_voice.mp3"
 }
 
 def handler(job):
     inp = job.get('input', {})
     text = inp.get('text', '')                    # नया डायलॉग
     mode = inp.get('mode', 'preset')              # 'preset' या 'custom'
-    preset_name = inp.get('preset_name', 'voice1')# 'voice1', 'voice2', 'voice3'
+    preset_name = inp.get('preset_name', 'voice1')# चुनी गई आवाज
     prompt_text = inp.get('prompt_text', '')      # कस्टम प्रॉम्प्ट
     ref_audio_b64 = inp.get('reference_audio', '')# कस्टम ऑडियो
 
@@ -44,36 +32,49 @@ def handler(job):
 
     try:
         ref_path = None
-        active_prompt = None
 
-        # 1. Preset Voice Mode (कंटेनर में पहले से मौजूद फाइलों से तुरंत पढ़ना)
         if mode == 'preset':
-            preset_info = PRESETS.get(preset_name, PRESETS["voice1"])
-            ref_path = preset_info["file"]
-            active_prompt = preset_info["prompt"]
-
-        # 2. Custom User Upload Mode
+            ref_path = PRESETS.get(preset_name, PRESETS["voice1"])
         elif mode == 'custom' and ref_audio_b64:
             audio_bytes = base64.b64decode(ref_audio_b64)
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
                 tmp.write(audio_bytes)
                 ref_path = tmp.name
-            active_prompt = prompt_text if prompt_text else None
 
+        # 👉 Pure Timbre Voice Cloning (बिना किसी बैकग्राउंड शोर के साफ़ आवाज़)
         if ref_path and os.path.exists(ref_path):
-            wav = model.generate(
-                text=text,
-                prompt_wav_path=ref_path,
-                prompt_text=active_prompt,
-                cfg_value=2.0,
-                inference_timesteps=10
-            )
+            if prompt_text:
+                wav = model.generate(
+                    text=text,
+                    prompt_wav_path=ref_path,
+                    prompt_text=prompt_text,
+                    cfg_value=1.8,
+                    inference_timesteps=15
+                )
+            else:
+                wav = model.generate(
+                    text=text,
+                    reference_wav_path=ref_path,
+                    cfg_value=1.8,
+                    inference_timesteps=15
+                )
+
             if mode == 'custom':
                 os.unlink(ref_path)
         else:
-            wav = model.generate(text=text, cfg_value=2.0, inference_timesteps=10)
+            wav = model.generate(text=text, cfg_value=1.8, inference_timesteps=15)
 
-        # 48kHz WAV Output Base64
+        # 🎚️ Audio Peak Normalization (आवाज़ के फटने और गर्जना को रोकने के लिए)
+        if isinstance(wav, torch.Tensor):
+            wav = wav.detach().cpu().numpy().squeeze()
+        elif isinstance(wav, np.ndarray):
+            wav = wav.squeeze()
+
+        max_val = np.abs(wav).max()
+        if max_val > 1.0:
+            wav = wav / max_val
+
+        # 48kHz Studio Quality WAV
         buf = io.BytesIO()
         sr = getattr(model.tts_model, "sample_rate", 48000)
         sf.write(buf, wav, sr, format='WAV')
