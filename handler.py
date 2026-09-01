@@ -9,39 +9,36 @@ from fish_speech.models.text2semantic.inference import launch_thread_safe_queue
 from fish_speech.models.dac.inference import load_model as load_decoder_model
 from fish_speech.inference_engine import TTSInferenceEngine
 
-print("Serverless AI Model लोड हो रहा है...")
+print("Loading AI Model...")
 device = "cuda" if torch.cuda.is_available() else "cpu"
 precision = torch.bfloat16 if torch.cuda.is_available() else torch.float32
 
-# Model Load
-llama_queue = launch_thread_safe_queue("/app/checkpoints/s2-pro", device=device, precision=precision, compile=False)
-decoder_model = load_decoder_model(config_name="modded_dac_vq", checkpoint_path="/app/checkpoints/s2-pro/codec.pth", device=device)
-engine = TTSInferenceEngine(llama_queue=llama_queue, decoder_model=decoder_model, precision=precision, compile=False)
+# Load S2-Pro Model
+q = launch_thread_safe_queue("/app/checkpoints/s2-pro", device=device, precision=precision, compile=False)
+dec = load_decoder_model(config_name="modded_dac_vq", checkpoint_path="/app/checkpoints/s2-pro/codec.pth", device=device)
+engine = TTSInferenceEngine(llama_queue=q, decoder_model=dec, precision=precision, compile=False)
+print("Model Ready!")
 
 def handler(job):
-    job_input = job.get('input', {})
-    text = job_input.get('text')
-    ref_audio_b64 = job_input.get('reference_audio')
-    preset_name = job_input.get('preset_name', '')
-    mode = job_input.get('mode', 'custom')
+    inp = job.get('input', {})
+    text = inp.get('text', '')                    # नया डायलॉग
+    prompt_text = inp.get('prompt_text', '')      # आवाज़ में जो बोला गया है
+    ref_b64 = inp.get('reference_audio', '')      # ऑडियो फ़ाइल (Base64)
 
     if not text:
         return {"error": "Text is required"}
+    if not ref_b64:
+        return {"error": "Reference audio is required"}
 
     try:
-        audio_bytes = None
-        if mode == 'custom' and ref_audio_b64:
-            audio_bytes = base64.b64decode(ref_audio_b64)
-        elif mode == 'preset' and preset_name:
-            preset_path = os.path.join('/app/presets', preset_name)
-            if os.path.exists(preset_path):
-                with open(preset_path, 'rb') as f:
-                    audio_bytes = f.read()
+        audio_bytes = base64.b64decode(ref_b64)
 
-        if not audio_bytes:
-            return {"error": "No reference audio provided"}
+        # prompt_text के साथ 100% साफ आवाज़ बनेगी
+        req = ServeTTSRequest(
+            text=text,
+            references=[ServeReferenceAudio(audio=audio_bytes, text=prompt_text)]
+        )
 
-        req = ServeTTSRequest(text=text, references=[ServeReferenceAudio(audio=audio_bytes, text="")])
         for res in engine.inference(req):
             if res.code == "final":
                 sr, audio_data = res.audio
