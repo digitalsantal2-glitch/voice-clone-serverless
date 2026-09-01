@@ -1,7 +1,6 @@
 import io
 import os
 import base64
-import tempfile
 import soundfile as sf
 import torch
 import runpod
@@ -10,11 +9,11 @@ from fish_speech.models.text2semantic.inference import launch_thread_safe_queue
 from fish_speech.models.vqgan.inference import load_model as load_decoder_model
 from fish_speech.inference_engine import TTSInferenceEngine
 
-print("1. Loading Fish Speech Model...")
+print("1. Loading Fish Speech 1.5 Model...")
 device = "cuda" if torch.cuda.is_available() else "cpu"
 precision = torch.bfloat16 if torch.cuda.is_available() else torch.float32
 
-# Load Fish Speech 1.5
+# Load Fish Speech 1.5 Stable
 llama_queue = launch_thread_safe_queue(
     checkpoint_path="/app/checkpoints/fish-speech-1.5",
     device=device,
@@ -34,20 +33,22 @@ engine = TTSInferenceEngine(
     precision=precision,
     compile=False
 )
-print("2. Fish Speech Ready!")
+print("2. Fish Speech 1.5 Ready!")
+
+COMMON_PROMPT = "मेरे हौसले की उड़ान अब कम नहीं होगी, मेरे जिद की जिद खत्म नहीं होगी। अब पूरा हिंदुस्तान जीतूंगा सिकंदर बनकर। यह ऐलान-ए-जंग खुली आम होगा, पूरे इंडिया में, सरेआम होगा! एक दमदार प्रस्तुति के लिए तैयार हो जाइए।"
 
 PRESETS = {
     "voice1": {
         "file": "/app/presets/long_kolhapuri.wav",
-        "prompt": "मेरे हौसले की उड़ान अब कम नहीं होगी, मेरे जिद की जिद खत्म नहीं होगी।"
+        "prompt": COMMON_PROMPT
     },
     "voice2": {
         "file": "/app/presets/competition_dialogue.mp3",
-        "prompt": "मेरे हौसले की उड़ान अब कम नहीं होगी, मेरे जिद की जिद खत्म नहीं होगी।"
+        "prompt": COMMON_PROMPT
     },
     "voice3": {
         "file": "/app/presets/competition_voice.mp3",
-        "prompt": "मेरे हौसले की उड़ान अब कम नहीं होगी, मेरे जिद की जिद खत्म नहीं होगी।"
+        "prompt": COMMON_PROMPT
     }
 }
 
@@ -78,14 +79,13 @@ def handler(job):
             audio_bytes = base64.b64decode(ref_audio_b64)
 
         if not audio_bytes:
-            return {"error": "No reference audio provided"}
+            return {"error": "No audio provided"}
 
         req = ServeTTSRequest(
             text=text,
             references=[ServeReferenceAudio(audio=audio_bytes, text=clean_prompt if clean_prompt else "")]
         )
 
-        audio_chunks = []
         for result in engine.inference(req):
             if result.code == "final":
                 sr, audio_data = result.audio
@@ -98,7 +98,7 @@ def handler(job):
             elif result.code == "error":
                 return {"error": str(result.error)}
 
-        return {"error": "Generation failed"}
+        return {"error": "Inference failed"}
     except Exception as e:
         return {"error": str(e)}
 
