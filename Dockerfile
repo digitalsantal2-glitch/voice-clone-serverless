@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
+FROM pytorch/pytorch:2.4.0-cuda12.4-cudnn9-runtime
 
 WORKDIR /app
 
@@ -12,19 +12,18 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     cmake \
-    ninja-build \
     && rm -rf /var/lib/apt/lists/*
 
-# 1. Fish Speech 1.5 का स्टेबल कोड क्लोन करें
-RUN git clone --depth 1 --branch v1.5.0 https://github.com/fishaudio/fish-speech.git /app/fish-speech && \
+# Fish Speech ओरिजिनल कोड इंस्टॉल करें
+RUN git clone --depth 1 https://github.com/fishaudio/fish-speech.git /app/fish-speech && \
     cd /app/fish-speech && \
     pip install --no-cache-dir -e . && \
-    pip install --no-cache-dir runpod soundfile requests
+    pip install --no-cache-dir runpod soundfile requests huggingface_hub
 
-# 2. Fish Speech 1.5 Model Download (1.5GB)
-RUN python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='fishaudio/fish-speech-1.5', local_dir='/app/checkpoints/fish-speech-1.5')"
+# कल वाला S2-Pro AI Model Download
+RUN python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='fishaudio/s2-pro', local_dir='/app/checkpoints/s2-pro')"
 
-# 3. तीनों DJ ऑडियो फाइल्स डाउनलोड करें
+# तीनों DJ ऑडियो फाइल्स डाउनलोड करें
 RUN mkdir -p /app/presets && \
     curl -L -o /app/presets/long_kolhapuri.wav https://files.catbox.moe/b1vfng.wav && \
     curl -L -o /app/presets/competition_dialogue.mp3 https://files.catbox.moe/i87vs7.mp3 && \
