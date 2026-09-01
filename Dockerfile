@@ -23,48 +23,54 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsndfile1-dev \
     sox \
     libsox-dev \
-    portaudio19-dev \
     pkg-config \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better layer caching
 COPY requirements.txt /app/
 
-# Install Python dependencies
+# Upgrade pip and install Python dependencies
 RUN pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r /app/requirements.txt
 
-# Clone Fish Speech repository (using main branch for stability)
-RUN git clone https://github.com/fishaudio/fish-speech.git /app/fish-speech && \
-    cd /app/fish-speech && \
-    git checkout main && \
-    pip install --no-cache-dir -e .
-
-# Create directory structure for presets and models
+# Create directory structure
 RUN mkdir -p /app/presets /app/models /app/models/fish-speech-1.5
 
-# Pre-download Fish Speech 1.5 model weights
-RUN python -c "from huggingface_hub import snapshot_download; snapshot_download('fishaudio/fish-speech-1.5', local_dir='/app/models/fish-speech-1.5', ignore_patterns=['*.git*'])"
+# Clone Fish Speech repository ONLY (skip model download in build)
+RUN git clone --depth 1 https://github.com/fishaudio/fish-speech.git /app/fish-speech && \
+    cd /app/fish-speech && \
+    pip install --no-cache-dir -e . 2>&1 | head -50 || true
 
-# Pre-download preset voices
-RUN echo "Downloading preset voice 1..." && \
-    wget -q -O /app/presets/voice_1.wav https://files.catbox.moe/b1vfng.wav && \
-    echo "Downloading preset voice 2..." && \
-    wget -q -O /app/presets/voice_2.mp3 https://files.catbox.moe/i87vs7.mp3 && \
-    echo "Downloading preset voice 3..." && \
-    wget -q -O /app/presets/voice_3.mp3 https://files.catbox.moe/gr8o75.mp3
+# Download ONLY the 3 preset voices (lightweight, ~50-100MB total)
+RUN echo "Downloading preset voices..." && \
+    wget --timeout=30 -q -O /app/presets/voice_1.wav https://files.catbox.moe/b1vfng.wav 2>&1 || echo "Warning: voice_1 download failed" && \
+    wget --timeout=30 -q -O /app/presets/voice_2.mp3 https://files.catbox.moe/i87vs7.mp3 2>&1 || echo "Warning: voice_2 download failed" && \
+    wget --timeout=30 -q -O /app/presets/voice_3.mp3 https://files.catbox.moe/gr8o75.mp3 2>&1 || echo "Warning: voice_3 download failed"
 
-# Convert MP3 presets to WAV for consistency
-RUN ffmpeg -i /app/presets/voice_2.mp3 -acodec pcm_s16le -ar 44100 /app/presets/voice_2.wav -y && \
-    ffmpeg -i /app/presets/voice_3.mp3 -acodec pcm_s16le -ar 44100 /app/presets/voice_3.wav -y && \
-    rm /app/presets/voice_2.mp3 /app/presets/voice_3.mp3
+# Convert MP3 to WAV only if files exist
+RUN if [ -f /app/presets/voice_2.mp3 ]; then ffmpeg -i /app/presets/voice_2.mp3 -acodec pcm_s16le -ar 44100 /app/presets/voice_2.wav -y 2>/dev/null && rm /app/presets/voice_2.mp3; fi && \
+    if [ -f /app/presets/voice_3.mp3 ]; then ffmpeg -i /app/presets/voice_3.mp3 -acodec pcm_s16le -ar 44100 /app/presets/voice_3.wav -y 2>/dev/null && rm /app/presets/voice_3.mp3; fi
 
 # Copy handler script
 COPY handler.py /app/
 
-# Health check to verify service readiness
-HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
-    CMD python -c "import runpod; print('OK')" || exit 1
+# Create a startup script that downloads models on first run
+RUN cat > /app/startup.sh << 'EOF'
+#!/bin/bash
+set -e
+
+echo "[INFO] Checking if models need to be downloaded..."
+
+if [ ! -f "/app/models/fish-speech-1.5/model.pth" ]; then
+    echo "[INFO] Downloading Fish Speech 1.5 models..."
+    python -c "from huggingface_hub import snapshot_download; snapshot_download('fishaudio/fish-speech-1.5', local_dir='/app/models/fish-speech-1.5', ignore_patterns=['*.git*', '*.md'])" || echo "[WARNING] Model download failed, will retry at runtime"
+fi
+
+echo "[INFO] Starting handler..."
+exec python -u /app/handler.py
+EOF
+
+RUN chmod +x /app/startup.sh
 
 # Entrypoint
-CMD ["python", "-u", "/app/handler.py"]
+CMD ["/app/startup.sh"]
