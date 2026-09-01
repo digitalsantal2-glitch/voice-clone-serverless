@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Voice Cloning DJ Tool - 24/7 Serverless</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .mode-btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px 25px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: #667eea;
+        }
+
+        .mode-btn:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .section {
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .preset-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+
+        .preset-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .preset-card.selected {
+            border-color: white;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .preset-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .preset-desc {
+            font-size: 0.95em;
+            opacity: 0.9;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .preset-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+        }
+
+        .preset-btn:hover {
+            background: #f0f4ff;
+            transform: scale(1.05);
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.05em;
+        }
+
+        .input-group input[type="file"],
+        .input-group textarea,
+        .input-group input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input[type="file"]:hover,
+        .input-group textarea:hover,
+        .input-group input[type="text"]:hover {
+            border-color: #667eea;
+        }
+
+        .input-group textarea:focus,
+        .input-group input[type="text"]:focus,
+        .input-group input[type="file"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-group textarea {
+            resize: vertical;
+            min-height: 100px;
+            line-height: 1.5;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 15px;
+            background: #f8f9ff;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .file-input-label:hover {
+            background: #f0f4ff;
+            border-color: #764ba2;
+        }
+
+        .file-input-wrapper input[type="file"]:focus + .file-input-label {
+            border-color: #764ba2;
+            background: #f0f4ff;
+        }
+
+        .file-name {
+            margin-top: 8px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.05em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #f0f4ff;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status-box {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .status-box.active {
+            display: block;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .status-title {
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-message {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin-top: 8px;
+        }
+
+        .success-badge {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .error-badge {
+            display: inline-block;
+            background: #ef4444;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .audio-player {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .audio-player audio {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .player-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .download-btn {
+            flex: 1;
+            padding: 12px 20px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        .metadata {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9ff;
+            border-radius: 6px;
+        }
+
+        .metadata-item {
+            display: inline-block;
+            margin-right: 20px;
+        }
+
+        .metadata-label {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .info-box {
+            background: #e0e7ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .info-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 20px;
+            font-size: 0.8em;
+            margin-right: 10px;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            .main-card {
+                padding: 25px;
+            }
+
+            .mode-selector {
+                flex-direction: column;
+            }
+
+            .mode-btn {
+                min-width: auto;
+            }
+
+            .preset-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                min-width: auto;
+            }
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .api-config {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            color: #92400e;
+        }
+
+        .api-config strong {
+            color: #b45309;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎙️ AI Voice Cloning DJ</h1>
+            <p>24/7 Serverless Voice Synthesis Tool</p>
+        </header>
+
+        <div class="main-card">
+            <div class="api-config">
+                <strong>⚙️ Configuration:</strong> RunPod Serverless Endpoint Connected
+                <span id="endpoint-status" style="float: right; font-weight: 600;">✓ Ready</span>
+            </div>
+
+            <div class="mode-selector">
+                <button class="mode-btn active" data-mode="preset">
+                    🎵 Preset Voices
+                </button>
+                <button class="mode-btn" data-mode="custom">
+                    🎤 Custom Voice
+                </button>
+            </div>
+
+            <!-- PRESET MODE -->
+            <div id="preset-section" class="section active">
+                <div class="section-title">
+                    <span>🎵</span> Select a Preset Voice
+                </div>
+
+                <div class="info-box">
+                    <span class="info-icon">ℹ️</span>
+                    Choose one of 3 pre-loaded DJ voices and enter text to synthesize.
+                </div>
+
+                <div class="preset-grid">
+                    <div class="preset-card selected" data-preset="1">
+                        <div class="preset-title">Voice 1</div>
+                        <div class="preset-desc">Long Kolhapuri</div>
+                        <button class="preset-btn">Select</button>
+                    </div>
+                    <div class="preset-card" data-preset="2">
+                        <div class="preset-title">Voice 2</div>
+                        <div class="preset-desc">Competition Dialogue</div>
+                        <button class="preset-btn">Select</button>
+                    </div>
+                    <div class="preset-card" data-preset="3">
+                        <div class="preset-title">Voice 3</div>
+                        <div class="preset-desc">Competition Voice</div>
+                        <button class="preset-btn">Select</button>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="preset-text">Text to Synthesize:</label>
+                    <textarea id="preset-text" placeholder="Enter the text you want the DJ to say...">नमस्ते दुनिया, यह एक परीक्षण है</textarea>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="preset-generate">
+                        Generate Audio
+                    </button>
+                </div>
+            </div>
+
+            <!-- CUSTOM MODE -->
+            <div id="custom-section" class="section">
+                <div class="section-title">
+                    <span>🎤</span> Upload Custom Voice
+                </div>
+
+                <div class="info-box">
+                    <span class="info-icon">ℹ️</span>
+                    Upload your own audio file (WAV/MP3) for voice cloning. Provide a transcript if needed.
+                </div>
+
+                <div class="input-group">
+                    <label for="custom-audio">Upload Audio File:</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="custom-audio" accept=".wav,.mp3,.m4a">
+                        <label for="custom-audio" class="file-input-label">
+                            📁 Click or drag audio file here (WAV, MP3, M4A)
+                        </label>
+                        <div class="file-name" id="file-name"></div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="custom-prompt">Audio Transcript (Optional):</label>
+                    <textarea id="custom-prompt" placeholder="Enter what the audio is saying (helps with cloning)..."></textarea>
+                </div>
+
+                <div class="input-group">
+                    <label for="custom-text">Text to Synthesize:</label>
+                    <textarea id="custom-text" placeholder="Enter the text you want to say in the cloned voice...">नमस्ते दुनिया</textarea>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="custom-generate">
+                        Generate Audio
+                    </button>
+                </div>
+            </div>
+
+            <!-- STATUS BOX -->
+            <div id="status-box" class="status-box">
+                <div class="status-title">
+                    <span class="spinner" id="spinner"></span>
+                    <span id="status-text">Processing...</span>
+                </div>
+                <div class="status-message" id="status-message">
+                    Sending request to RunPod Serverless...
+                </div>
+            </div>
+
+            <!-- AUDIO PLAYER -->
+            <div id="audio-player" class="audio-player" style="display: none;">
+                <audio id="result-audio" controls></audio>
+                <div class="player-controls">
+                    <button class="download-btn" id="download-btn">
+                        📥 Download Audio
+                    </button>
+                </div>
+                <div class="metadata" id="metadata"></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🚀 Powered by Fish Audio + RunPod Serverless | 24/7 Available</p>
+        </div>
+    </div>
+
+    <script>
+        // ================== CONFIGURATION ==================
+        const CONFIG = {
+            RUNPOD_ENDPOINT: 'tat2r9q5eh58vy',
+            RUNPOD_API_URL: 'https://api.runpod.io/v2',
+            POLL_INTERVAL: 1000, // 1 second
+            MAX_POLLS: 300 // 5 minutes max
+        };
+
+        // ================== STATE MANAGEMENT ==================
+        let appState = {
+            currentMode: 'preset',
+            selectedPreset: 1,
+            customAudioFile: null,
+            isProcessing: false,
+            currentJobId: null,
+            generatedAudio: null
+        };
+
+        // ================== DOM ELEMENTS ==================
+        const domElements = {
+            // Mode buttons
+            modeButtons: document.querySelectorAll('.mode-btn'),
+            // Preset elements
+            presetCards: document.querySelectorAll('.preset-card'),
+            presetText: document.getElementById('preset-text'),
+            presetGenerateBtn: document.getElementById('preset-generate'),
+            presetSection: document.getElementById('preset-section'),
+            // Custom elements
+            customAudio: document.getElementById('custom-audio'),
+            customPrompt: document.getElementById('custom-prompt'),
+            customText: document.getElementById('custom-text'),
+            customGenerateBtn: document.getElementById('custom-generate'),
+            customSection: document.getElementById('custom-section'),
+            fileName: document.getElementById('file-name'),
+            // Status elements
+            statusBox: document.getElementById('status-box'),
+            statusText: document.getElementById('status-text'),
+            statusMessage: document.getElementById('status-message'),
+            spinner: document.getElementById('spinner'),
+            // Audio player elements
+            audioPlayer: document.getElementById('audio-player'),
+            resultAudio: document.getElementById('result-audio'),
+            downloadBtn: document.getElementById('download-btn'),
+            metadata: document.getElementById('metadata')
+        };
+
+        // ================== MODE SWITCHING ==================
+        domElements.modeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.mode;
+                switchMode(mode);
+            });
+        });
+
+        function switchMode(mode) {
+            appState.currentMode = mode;
+
+            // Update buttons
+            domElements.modeButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+
+            // Update sections
+            domElements.presetSection.classList.toggle('active', mode === 'preset');
+            domElements.customSection.classList.toggle('active', mode === 'custom');
+
+            // Hide audio player when switching modes
+            domElements.audioPlayer.style.display = 'none';
+            domElements.statusBox.classList.remove('active');
+        }
+
+        // ================== PRESET VOICE SELECTION ==================
+        domElements.presetCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const presetId = parseInt(card.dataset.preset);
+                selectPreset(presetId);
+            });
+        });
+
+        function selectPreset(presetId) {
+            appState.selectedPreset = presetId;
+
+            domElements.presetCards.forEach(card => {
+                card.classList.toggle('selected', parseInt(card.dataset.preset) === presetId);
+            });
+        }
+
+        // ================== CUSTOM AUDIO FILE HANDLING ==================
+        domElements.customAudio.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                appState.customAudioFile = file;
+                domElements.fileName.textContent = `✓ Selected: ${file.name} (${formatFileSize(file.size)})`;
+                domElements.fileName.style.color = '#10b981';
+
+                // Validate file
+                const validTypes = ['audio/wav', 'audio/mpeg', 'audio/mp4'];
+                if (!validTypes.includes(file.type)) {
+                    showError('Invalid audio format. Please use WAV, MP3, or M4A.');
+                    appState.customAudioFile = null;
+                    domElements.fileName.textContent = '✗ Invalid format';
+                    domElements.fileName.style.color = '#ef4444';
+                }
+            }
+        });
+
+        // Drag and drop support
+        const fileLabel = domElements.customAudio.parentElement.querySelector('.file-input-label');
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileLabel.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            fileLabel.addEventListener(eventName, () => {
+                fileLabel.style.background = '#f0f4ff';
+                fileLabel.style.borderColor = '#764ba2';
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            fileLabel.addEventListener(eventName, () => {
+                fileLabel.style.background = '#f8f9ff';
+                fileLabel.style.borderColor = '#667eea';
+            });
+        });
+
+        fileLabel.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            domElements.customAudio.files = files;
+            domElements.customAudio.dispatchEvent(new Event('change'));
+        });
+
+        // ================== AUDIO GENERATION ==================
+        domElements.presetGenerateBtn.addEventListener('click', generatePresetAudio);
+        domElements.customGenerateBtn.addEventListener('click', generateCustomAudio);
+
+        async function generatePresetAudio() {
+            if (!domElements.presetText.value.trim()) {
+                showError('Please enter text to synthesize.');
+                return;
+            }
+
+            const payload = {
+                mode: 'preset',
+                preset_id: appState.selectedPreset,
+                text_to_synthesize: domElements.presetText.value
+            };
+
+            await sendRequest(payload);
+        }
+
+        async function generateCustomAudio() {
+            if (!appState.customAudioFile) {
+                showError('Please upload an audio file.');
+                return;
+            }
+
+            if (!domElements.customText.value.trim()) {
+                showError('Please enter text to synthesize.');
+                return;
+            }
+
+            // Convert file to Base64
+            const base64Audio = await fileToBase64(appState.customAudioFile);
+
+            const payload = {
+                mode: 'custom',
+                audio_base64: base64Audio,
+                prompt_text: domElements.customPrompt.value,
+                text_to_synthesize: domElements.customText.value
+            };
+
+            await sendRequest(payload);
+        }
+
+        async function sendRequest(payload) {
+            if (appState.isProcessing) {
+                showError('A request is already processing. Please wait.');
+                return;
+            }
+
+            appState.isProcessing = true;
+            showStatus('Sending request to RunPod Serverless...');
+
+            try {
+                const url = `${CONFIG.RUNPOD_API_URL}/${CONFIG.RUNPOD_ENDPOINT}/run`;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                if (!data.id) {
+                    throw new Error('No job ID received from server');
+                }
+
+                appState.currentJobId = data.id;
+                showStatus(`Job queued. ID: ${data.id.substring(0, 8)}... - Waiting for completion...`);
+
+                // Poll for result
+                await pollJobStatus();
+
+            } catch (error) {
+                showError(`Failed to send request: ${error.message}`);
+                appState.isProcessing = false;
+            }
+        }
+
+        async function pollJobStatus() {
+            let pollCount = 0;
+
+            while (pollCount < CONFIG.MAX_POLLS) {
+                try {
+                    const url = `${CONFIG.RUNPOD_API_URL}/${CONFIG.RUNPOD_ENDPOINT}/status/${appState.currentJobId}`;
+
+                    const response = await fetch(url);
+                    const data = await response.json();
+
+                    const status = data.status || data.state;
+
+                    if (status === 'COMPLETED') {
+                        if (data.output) {
+                            await handleSuccess(data.output);
+                        } else {
+                            showError('Job completed but no output received');
+                        }
+                        appState.isProcessing = false;
+                        return;
+                    }
+
+                    if (status === 'FAILED') {
+                        const errorMsg = data.output?.error || 'Unknown error';
+                        showError(`Job failed: ${errorMsg}`);
+                        appState.isProcessing = false;
+                        return;
+                    }
+
+                    showStatus(`Processing... (${pollCount}s elapsed)`);
+                    pollCount++;
+
+                    await new Promise(resolve => setTimeout(resolve, CONFIG.POLL_INTERVAL));
+
+                } catch (error) {
+                    showError(`Polling error: ${error.message}`);
+                    appState.isProcessing = false;
+                    return;
+                }
+            }
+
+            showError('Job timeout - exceeded 5 minutes');
+            appState.isProcessing = false;
+        }
+
+        async function handleSuccess(output) {
+            if (!output.audio_base64) {
+                showError('No audio data in response');
+                return;
+            }
+
+            try {
+                // Decode Base64 to Blob
+                const audioBlob = base64ToBlob(output.audio_base64, 'audio/wav');
+                const audioUrl = URL.createObjectURL(audioBlob);
+
+                // Display audio player
+                domElements.resultAudio.src = audioUrl;
+                domElements.audioPlayer.style.display = 'block';
+
+                // Store for download
+                appState.generatedAudio = {
+                    blob: audioBlob,
+                    url: audioUrl
+                };
+
+                // Display metadata
+                if (output.metadata) {
+                    displayMetadata(output.metadata);
+                }
+
+                // Update status to success
+                domElements.statusBox.innerHTML = `
+                    <div class="status-title">
+                        <span style="color: #10b981; font-size: 1.2em;">✓</span>
+                        Success! Audio Generated
+                    </div>
+                    <span class="success-badge">Audio ready for playback and download</span>
+                `;
+
+                // Auto-scroll to player
+                setTimeout(() => {
+                    domElements.audioPlayer.scrollIntoView({ behavior: 'smooth' });
+                }, 300);
+
+            } catch (error) {
+                showError(`Failed to process audio: ${error.message}`);
+            }
+        }
+
+        function displayMetadata(metadata) {
+            const items = [
+                `Duration: ${metadata.duration_seconds?.toFixed(2) || 'N/A'}s`,
+                `Sample Rate: ${metadata.sample_rate || 'N/A'} Hz`,
+                `Mode: ${metadata.mode || 'N/A'}`,
+                metadata.preset_id ? `Preset: #${metadata.preset_id}` : '',
+                metadata.text_length ? `Text: ${metadata.text_length} chars` : ''
+            ].filter(Boolean);
+
+            domElements.metadata.innerHTML = items.map(item => 
+                `<div class="metadata-item"><span class="metadata-label">${item.split(':')[0]}:</span> ${item.split(':')[1]}</div>`
+            ).join('');
+        }
+
+        // ================== DOWNLOAD FUNCTIONALITY ==================
+        domElements.downloadBtn.addEventListener('click', () => {
+            if (!appState.generatedAudio) return;
+
+            const link = document.createElement('a');
+            link.href = appState.generatedAudio.url;
+            link.download = `voice_clone_${new Date().getTime()}.wav`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // ================== UTILITY FUNCTIONS ==================
+        function showStatus(message) {
+            domElements.statusBox.classList.add('active');
+            domElements.statusText.textContent = message;
+            domElements.statusMessage.innerHTML = `
+                <span class="spinner" style="margin-right: 8px;"></span>
+                ${message}
+            `;
+        }
+
+        function showError(message) {
+            domElements.statusBox.classList.add('active');
+            domElements.statusText.textContent = '✗ Error';
+            domElements.statusMessage.innerHTML = `
+                <span class="error-badge">${message}</span>
+            `;
+            domElements.spinner.style.display = 'none';
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    // Remove the "data:audio/...;base64," prefix
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function base64ToBlob(base64, mimeType) {
+            const byteCharacters = atob(base64);
+            const byteNumbers = new Array(byteCharacters.length);
+
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], { type: mimeType });
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // ================== INITIALIZATION ==================
+        console.log('🎙️ AI Voice Cloning DJ Tool initialized');
+        console.log('Endpoint:', CONFIG.RUNPOD_ENDPOINT);
+        console.log('API URL:', CONFIG.RUNPOD_API_URL);
+
+    </script>
+</body>
+</html>
