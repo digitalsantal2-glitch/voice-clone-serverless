@@ -48,14 +48,15 @@ RUN echo "Downloading preset voices..." && \
     wget --timeout=30 -q -O /app/presets/voice_3.mp3 https://files.catbox.moe/gr8o75.mp3 2>&1 || echo "Warning: voice_3 download failed"
 
 # Convert MP3 to WAV only if files exist
-RUN if [ -f /app/presets/voice_2.mp3 ]; then ffmpeg -i /app/presets/voice_2.mp3 -acodec pcm_s16le -ar 44100 /app/presets/voice_2.wav -y 2>/dev/null && rm /app/presets/voice_2.mp3; fi && \
-    if [ -f /app/presets/voice_3.mp3 ]; then ffmpeg -i /app/presets/voice_3.mp3 -acodec pcm_s16le -ar 44100 /app/presets/voice_3.wav -y 2>/dev/null && rm /app/presets/voice_3.mp3; fi
+RUN bash -c 'if [ -f /app/presets/voice_2.mp3 ]; then ffmpeg -i /app/presets/voice_2.mp3 -acodec pcm_s16le -ar 44100 /app/presets/voice_2.wav -y 2>/dev/null && rm /app/presets/voice_2.mp3; fi' && \
+    bash -c 'if [ -f /app/presets/voice_3.mp3 ]; then ffmpeg -i /app/presets/voice_3.mp3 -acodec pcm_s16le -ar 44100 /app/presets/voice_3.wav -y 2>/dev/null && rm /app/presets/voice_3.mp3; fi'
 
 # Copy handler script
 COPY handler.py /app/
 
 # Create a startup script that downloads models on first run
-RUN cat > /app/startup.sh << 'EOF'
+RUN mkdir -p /app/scripts && \
+    cat > /app/scripts/startup.sh << 'STARTUP_EOF'
 #!/bin/bash
 set -e
 
@@ -63,14 +64,14 @@ echo "[INFO] Checking if models need to be downloaded..."
 
 if [ ! -f "/app/models/fish-speech-1.5/model.pth" ]; then
     echo "[INFO] Downloading Fish Speech 1.5 models..."
-    python -c "from huggingface_hub import snapshot_download; snapshot_download('fishaudio/fish-speech-1.5', local_dir='/app/models/fish-speech-1.5', ignore_patterns=['*.git*', '*.md'])" || echo "[WARNING] Model download failed, will retry at runtime"
+    python -c "from huggingface_hub import snapshot_download; snapshot_download('fishaudio/fish-speech-1.5', local_dir='/app/models/fish-speech-1.5', ignore_patterns=['*.git*', '*.md'])" || echo "[WARNING] Model download may retry at runtime"
 fi
 
 echo "[INFO] Starting handler..."
 exec python -u /app/handler.py
-EOF
+STARTUP_EOF
 
-RUN chmod +x /app/startup.sh
+RUN chmod +x /app/scripts/startup.sh
 
 # Entrypoint
-CMD ["/app/startup.sh"]
+CMD ["/app/scripts/startup.sh"]
