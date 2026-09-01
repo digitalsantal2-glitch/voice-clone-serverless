@@ -2,90 +2,104 @@ import io
 import os
 import base64
 import tempfile
-import numpy as np
 import soundfile as sf
 import torch
 import runpod
-from voxcpm import VoxCPM
+from fish_speech.utils.schema import ServeTTSRequest, ServeReferenceAudio
+from fish_speech.models.text2semantic.inference import launch_thread_safe_queue
+from fish_speech.models.vqgan.inference import load_model as load_decoder_model
+from fish_speech.inference_engine import TTSInferenceEngine
 
-print("Loading OpenBMB VoxCPM2 Model...")
-# Clean Voice Model with Denoiser
-model = VoxCPM.from_pretrained("openbmb/VoxCPM2", load_denoiser=True)
-print("OpenBMB VoxCPM2 Ready!")
+print("1. Loading Fish Speech Model...")
+device = "cuda" if torch.cuda.is_available() else "cpu"
+precision = torch.bfloat16 if torch.cuda.is_available() else torch.float32
+
+# Load Fish Speech 1.5
+llama_queue = launch_thread_safe_queue(
+    checkpoint_path="/app/checkpoints/fish-speech-1.5",
+    device=device,
+    precision=precision,
+    compile=False
+)
+
+decoder_model = load_decoder_model(
+    config_name="firefly_gan_vq",
+    checkpoint_path="/app/checkpoints/fish-speech-1.5/firefly-gan-vq-fsq-8x1024-21hz-generator.pth",
+    device=device
+)
+
+engine = TTSInferenceEngine(
+    llama_queue=llama_queue,
+    decoder_model=decoder_model,
+    precision=precision,
+    compile=False
+)
+print("2. Fish Speech Ready!")
 
 PRESETS = {
-    "voice1": "/app/presets/long_kolhapuri.wav",
-    "voice2": "/app/presets/competition_dialogue.mp3",
-    "voice3": "/app/presets/competition_voice.mp3"
+    "voice1": {
+        "file": "/app/presets/long_kolhapuri.wav",
+        "prompt": "मेरे हौसले की उड़ान अब कम नहीं होगी, मेरे जिद की जिद खत्म नहीं होगी।"
+    },
+    "voice2": {
+        "file": "/app/presets/competition_dialogue.mp3",
+        "prompt": "मेरे हौसले की उड़ान अब कम नहीं होगी, मेरे जिद की जिद खत्म नहीं होगी।"
+    },
+    "voice3": {
+        "file": "/app/presets/competition_voice.mp3",
+        "prompt": "मेरे हौसले की उड़ान अब कम नहीं होगी, मेरे जिद की जिद खत्म नहीं होगी।"
+    }
 }
 
 def handler(job):
     inp = job.get('input', {})
     text = inp.get('text', '')                    # नया डायलॉग
     mode = inp.get('mode', 'preset')              # 'preset' या 'custom'
-    preset_name = inp.get('preset_name', 'voice1')# चुनी गई आवाज
-    prompt_text = inp.get('prompt_text', '')      # कस्टम प्रॉम्प्ट
-    ref_audio_b64 = inp.get('reference_audio', '')# कस्टम ऑडियो
+    preset_name = inp.get('preset_name', 'voice1')# 'voice1', 'voice2', 'voice3'
+    prompt_text = inp.get('prompt_text', '')
+    ref_audio_b64 = inp.get('reference_audio', '')
 
     if not text:
         return {"error": "Text is required"}
 
     try:
-        ref_path = None
+        audio_bytes = None
+        clean_prompt = prompt_text
 
+        # 1. Preset Voice
         if mode == 'preset':
-            ref_path = PRESETS.get(preset_name, PRESETS["voice1"])
+            preset_info = PRESETS.get(preset_name, PRESETS["voice1"])
+            with open(preset_info["file"], "rb") as f:
+                audio_bytes = f.read()
+            clean_prompt = preset_info["prompt"]
+
+        # 2. Custom User Upload
         elif mode == 'custom' and ref_audio_b64:
             audio_bytes = base64.b64decode(ref_audio_b64)
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-                tmp.write(audio_bytes)
-                ref_path = tmp.name
 
-        # 👉 Pure Timbre Voice Cloning (बिना किसी बैकग्राउंड शोर के साफ़ आवाज़)
-        if ref_path and os.path.exists(ref_path):
-            if prompt_text:
-                wav = model.generate(
-                    text=text,
-                    prompt_wav_path=ref_path,
-                    prompt_text=prompt_text,
-                    cfg_value=1.8,
-                    inference_timesteps=15
-                )
-            else:
-                wav = model.generate(
-                    text=text,
-                    reference_wav_path=ref_path,
-                    cfg_value=1.8,
-                    inference_timesteps=15
-                )
+        if not audio_bytes:
+            return {"error": "No reference audio provided"}
 
-            if mode == 'custom':
-                os.unlink(ref_path)
-        else:
-            wav = model.generate(text=text, cfg_value=1.8, inference_timesteps=15)
+        req = ServeTTSRequest(
+            text=text,
+            references=[ServeReferenceAudio(audio=audio_bytes, text=clean_prompt if clean_prompt else "")]
+        )
 
-        # 🎚️ Audio Peak Normalization (आवाज़ के फटने और गर्जना को रोकने के लिए)
-        if isinstance(wav, torch.Tensor):
-            wav = wav.detach().cpu().numpy().squeeze()
-        elif isinstance(wav, np.ndarray):
-            wav = wav.squeeze()
+        audio_chunks = []
+        for result in engine.inference(req):
+            if result.code == "final":
+                sr, audio_data = result.audio
+                buf = io.BytesIO()
+                sf.write(buf, audio_data, sr, format='WAV')
+                return {
+                    "status": "success",
+                    "audio_base64": base64.b64encode(buf.getvalue()).decode('utf-8')
+                }
+            elif result.code == "error":
+                return {"error": str(result.error)}
 
-        max_val = np.abs(wav).max()
-        if max_val > 1.0:
-            wav = wav / max_val
-
-        # 48kHz Studio Quality WAV
-        buf = io.BytesIO()
-        sr = getattr(model.tts_model, "sample_rate", 48000)
-        sf.write(buf, wav, sr, format='WAV')
-        out_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
-
-        return {
-            "status": "success",
-            "audio_base64": out_b64
-        }
+        return {"error": "Generation failed"}
     except Exception as e:
-        print("Inference Error:", str(e))
         return {"error": str(e)}
 
 runpod.serverless.start({"handler": handler})
