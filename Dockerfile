@@ -7,11 +7,10 @@ ENV PYTHONUNBUFFERED=1 \
 
 RUN apt-get update && apt-get install -y git ffmpeg libsndfile1 && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir voxcpm soundfile runpod huggingface_hub
 
-# OpenBMB VoxCPM Model Download
-RUN python -c "from voxcpm import VoxCPM; VoxCPM.from_pretrained('openbmb/VoxCPM2', load_denoiser=False)"
+# HuggingFace से Model फाइल्स डाउनलोड करें (बिना GPU एरर के)
+RUN python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='openbmb/VoxCPM2')"
 
 COPY handler.py /app/handler.py
 
