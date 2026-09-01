@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎙️ AI Voice Cloning DJ Tool - Blogger Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --warning-color: #f59e0b;
+            --light-bg: #f8f9ff;
+            --border-color: #ddd;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            min-height: 100vh;
+            padding: 15px;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .voiceclone-container {
+            max-width: 950px;
+            margin: 0 auto;
+        }
+
+        .voiceclone-header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        .voiceclone-header h1 {
+            font-size: 2.2em;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-weight: 700;
+        }
+
+        .voiceclone-header p {
+            font-size: 1em;
+            opacity: 0.95;
+        }
+
+        .voiceclone-main {
+            background: white;
+            border-radius: 15px;
+            padding: 35px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .voiceclone-alert {
+            background: #e0e7ff;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+            color: #333;
+        }
+
+        .voiceclone-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+
+        .voiceclone-tab-btn {
+            padding: 12px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+            top: 2px;
+        }
+
+        .voiceclone-tab-btn:hover {
+            color: var(--primary-color);
+        }
+
+        .voiceclone-tab-btn.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .voiceclone-tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .voiceclone-tab-content.active {
+            display: block;
+        }
+
+        .voiceclone-section-title {
+            font-size: 1.25em;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .voiceclone-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .voiceclone-preset {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border-radius: 10px;
+            padding: 18px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+            text-align: center;
+        }
+
+        .voiceclone-preset:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .voiceclone-preset.selected {
+            border-color: white;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .voiceclone-preset-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .voiceclone-preset-desc {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .voiceclone-form-group {
+            margin-bottom: 20px;
+        }
+
+        .voiceclone-form-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .voiceclone-form-group input[type="file"],
+        .voiceclone-form-group textarea,
+        .voiceclone-form-group input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .voiceclone-form-group input[type="file"]:focus,
+        .voiceclone-form-group textarea:focus,
+        .voiceclone-form-group input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .voiceclone-form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+            line-height: 1.5;
+        }
+
+        .voiceclone-file-input {
+            position: relative;
+            overflow: hidden;
+            display: block;
+        }
+
+        .voiceclone-file-input input[type="file"] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .voiceclone-file-label {
+            display: block;
+            padding: 15px;
+            background: var(--light-bg);
+            border: 2px dashed var(--primary-color);
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .voiceclone-file-label:hover {
+            background: #f0f4ff;
+            border-color: var(--secondary-color);
+        }
+
+        .voiceclone-file-name {
+            margin-top: 8px;
+            font-size: 0.85em;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .voiceclone-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        .voiceclone-btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .voiceclone-btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .voiceclone-btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .voiceclone-btn-primary:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .voiceclone-btn-secondary {
+            background: var(--light-bg);
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+        }
+
+        .voiceclone-btn-secondary:hover:not(:disabled) {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .voiceclone-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .voiceclone-status {
+            background: var(--light-bg);
+            border-left: 4px solid var(--primary-color);
+            padding: 18px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .voiceclone-status.active {
+            display: block;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        .voiceclone-status.success {
+            border-left-color: var(--success-color);
+            background: #ecfdf5;
+        }
+
+        .voiceclone-status.error {
+            border-left-color: var(--error-color);
+            background: #fef2f2;
+        }
+
+        .voiceclone-status-title {
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95em;
+        }
+
+        .voiceclone-status.success .voiceclone-status-title {
+            color: var(--success-color);
+        }
+
+        .voiceclone-status.error .voiceclone-status-title {
+            color: var(--error-color);
+        }
+
+        .voiceclone-spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .voiceclone-status-msg {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .voiceclone-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .voiceclone-badge-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .voiceclone-badge-error {
+            background: var(--error-color);
+            color: white;
+        }
+
+        .voiceclone-player {
+            background: white;
+            border-radius: 10px;
+            padding: 18px;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: none;
+        }
+
+        .voiceclone-player.active {
+            display: block;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        .voiceclone-player audio {
+            width: 100%;
+            margin-bottom: 12px;
+            border-radius: 8px;
+        }
+
+        .voiceclone-player-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .voiceclone-download-btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 10px 20px;
+            background: var(--success-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+        }
+
+        .voiceclone-download-btn:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        .voiceclone-metadata {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 12px;
+            padding: 10px;
+            background: var(--light-bg);
+            border-radius: 6px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .voiceclone-meta-item {
+            display: flex;
+            gap: 5px;
+        }
+
+        .voiceclone-meta-label {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .voiceclone-footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 640px) {
+            .voiceclone-main {
+                padding: 20px;
+            }
+
+            .voiceclone-header h1 {
+                font-size: 1.6em;
+            }
+
+            .voiceclone-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .voiceclone-buttons {
+                flex-direction: column;
+            }
+
+            .voiceclone-btn {
+                min-width: auto;
+                width: 100%;
+            }
+
+            .voiceclone-tabs {
+                flex-direction: column;
+                border-bottom: none;
+                border-right: 2px solid var(--border-color);
+            }
+
+            .voiceclone-tab-btn {
+                border-bottom: none;
+                border-right: 3px solid transparent;
+                text-align: left;
+            }
+
+            .voiceclone-tab-btn.active {
+                border-right-color: var(--primary-color);
+                border-bottom: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="voiceclone-container">
+        <div class="voiceclone-header">
+            <h1>🎙️ AI Voice Cloning DJ</h1>
+            <p>24/7 Serverless Voice Synthesis Tool</p>
+        </div>
+
+        <div class="voiceclone-main">
+            <!-- ALERT -->
+            <div class="voiceclone-alert">
+                ✓ <strong>Service Active:</strong> RunPod Serverless Endpoint Connected and Ready
+            </div>
+
+            <!-- TABS -->
+            <div class="voiceclone-tabs">
+                <button class="voiceclone-tab-btn active" data-tab="preset">
+                    🎵 Preset Voices
+                </button>
+                <button class="voiceclone-tab-btn" data-tab="custom">
+                    🎤 Custom Voice
+                </button>
+            </div>
+
+            <!-- PRESET TAB -->
+            <div class="voiceclone-tab-content active" id="preset-tab">
+                <div class="voiceclone-section-title">
+                    <span>🎵</span> Select Your Voice
+                </div>
+
+                <div class="voiceclone-grid" id="preset-grid">
+                    <!-- Presets will be generated by JS -->
+                </div>
+
+                <div class="voiceclone-form-group">
+                    <label for="preset-text">Text to Synthesize:</label>
+                    <textarea id="preset-text" placeholder="Enter the text you want the DJ to say...">नमस्ते दुनिया</textarea>
+                </div>
+
+                <div class="voiceclone-buttons">
+                    <button class="voiceclone-btn voiceclone-btn-primary" id="preset-generate">
+                        🎬 Generate Audio
+                    </button>
+                </div>
+            </div>
+
+            <!-- CUSTOM TAB -->
+            <div class="voiceclone-tab-content" id="custom-tab">
+                <div class="voiceclone-section-title">
+                    <span>🎤</span> Upload Your Voice
+                </div>
+
+                <div class="voiceclone-form-group">
+                    <label>Upload Audio File:</label>
+                    <div class="voiceclone-file-input">
+                        <input type="file" id="custom-audio" accept=".wav,.mp3,.m4a">
+                        <label for="custom-audio" class="voiceclone-file-label">
+                            📁 Click to upload or drag audio file (WAV, MP3, M4A)
+                        </label>
+                        <div class="voiceclone-file-name" id="file-name"></div>
+                    </div>
+                </div>
+
+                <div class="voiceclone-form-group">
+                    <label for="custom-prompt">Audio Transcript (Optional):</label>
+                    <textarea id="custom-prompt" placeholder="What is being said in the audio?"></textarea>
+                </div>
+
+                <div class="voiceclone-form-group">
+                    <label for="custom-text">Text to Synthesize:</label>
+                    <textarea id="custom-text" placeholder="What you want to say in cloned voice...">नमस्ते</textarea>
+                </div>
+
+                <div class="voiceclone-buttons">
+                    <button class="voiceclone-btn voiceclone-btn-primary" id="custom-generate">
+                        🎬 Generate Audio
+                    </button>
+                </div>
+            </div>
+
+            <!-- STATUS BOX -->
+            <div class="voiceclone-status" id="status-box">
+                <div class="voiceclone-status-title">
+                    <span class="voiceclone-spinner" id="status-spinner"></span>
+                    <span id="status-title">Processing...</span>
+                </div>
+                <div class="voiceclone-status-msg" id="status-message">
+                    Sending to RunPod Serverless...
+                </div>
+            </div>
+
+            <!-- AUDIO PLAYER -->
+            <div class="voiceclone-player" id="player-box">
+                <audio id="result-audio" controls style="width: 100%;"></audio>
+                <div class="voiceclone-player-controls">
+                    <button class="voiceclone-download-btn" id="download-btn">
+                        📥 Download Audio
+                    </button>
+                </div>
+                <div class="voiceclone-metadata" id="metadata"></div>
+            </div>
+        </div>
+
+        <div class="voiceclone-footer">
+            🚀 Powered by Fish Audio + RunPod Serverless | 24/7 Always Available
+        </div>
+    </div>
+
+    <script>
+        // ==================== CONFIGURATION ====================
+        const VOICE_CONFIG = {
+            endpoint: 'tat2r9q5eh58vy',
+            apiUrl: 'https://api.runpod.io/v2',
+            pollInterval: 1000,
+            maxPolls: 300,
+            presets: [
+                { id: 1, name: 'Voice 1', description: 'Long Kolhapuri' },
+                { id: 2, name: 'Voice 2', description: 'Competition Dialogue' },
+                { id: 3, name: 'Voice 3', description: 'Competition Voice' }
+            ]
+        };
+
+        // ==================== STATE ====================
+        let voiceState = {
+            mode: 'preset',
+            selectedPreset: 1,
+            customFile: null,
+            isProcessing: false,
+            currentJobId: null,
+            generatedAudio: null
+        };
+
+        // ==================== DOM ELEMENTS ====================
+        const voiceDOM = {
+            tabButtons: document.querySelectorAll('.voiceclone-tab-btn'),
+            tabContents: document.querySelectorAll('.voiceclone-tab-content'),
+            presetGrid: document.getElementById('preset-grid'),
+            presetText: document.getElementById('preset-text'),
+            presetGenerate: document.getElementById('preset-generate'),
+            customAudio: document.getElementById('custom-audio'),
+            customPrompt: document.getElementById('custom-prompt'),
+            customText: document.getElementById('custom-text'),
+            customGenerate: document.getElementById('custom-generate'),
+            fileName: document.getElementById('file-name'),
+            statusBox: document.getElementById('status-box'),
+            statusTitle: document.getElementById('status-title'),
+            statusMessage: document.getElementById('status-message'),
+            statusSpinner: document.getElementById('status-spinner'),
+            playerBox: document.getElementById('player-box'),
+            resultAudio: document.getElementById('result-audio'),
+            downloadBtn: document.getElementById('download-btn'),
+            metadata: document.getElementById('metadata')
+        };
+
+        // ==================== INITIALIZATION ====================
+        function initVoiceTool() {
+            generatePresetCards();
+            attachEventListeners();
+        }
+
+        function generatePresetCards() {
+            voiceDOM.presetGrid.innerHTML = VOICE_CONFIG.presets.map(preset => `
+                <div class="voiceclone-preset ${preset.id === 1 ? 'selected' : ''}" data-preset="${preset.id}">
+                    <div class="voiceclone-preset-title">${preset.name}</div>
+                    <div class="voiceclone-preset-desc">${preset.description}</div>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.voiceclone-preset').forEach(card => {
+                card.addEventListener('click', () => selectPreset(parseInt(card.dataset.preset)));
+            });
+        }
+
+        function attachEventListeners() {
+            // Tab switching
+            voiceDOM.tabButtons.forEach(btn => {
+                btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+            });
+
+            // File input
+            voiceDOM.customAudio.addEventListener('change', handleFileSelect);
+            setupDragDrop();
+
+            // Generate buttons
+            voiceDOM.presetGenerate.addEventListener('click', generatePresetAudio);
+            voiceDOM.customGenerate.addEventListener('click', generateCustomAudio);
+
+            // Download button
+            voiceDOM.downloadBtn.addEventListener('click', downloadAudio);
+        }
+
+        // ==================== TAB SWITCHING ====================
+        function switchTab(tabName) {
+            voiceState.mode = tabName;
+
+            voiceDOM.tabButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tabName);
+            });
+
+            voiceDOM.tabContents.forEach(content => {
+                content.classList.toggle('active', content.id === tabName + '-tab');
+            });
+
+            voiceDOM.playerBox.classList.remove('active');
+            voiceDOM.statusBox.classList.remove('active');
+        }
+
+        // ==================== PRESET SELECTION ====================
+        function selectPreset(id) {
+            voiceState.selectedPreset = id;
+            document.querySelectorAll('.voiceclone-preset').forEach(card => {
+                card.classList.toggle('selected', parseInt(card.dataset.preset) === id);
+            });
+        }
+
+        // ==================== FILE HANDLING ====================
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            voiceState.customFile = file;
+            voiceDOM.fileName.textContent = `✓ ${file.name} (${formatFileSize(file.size)})`;
+            voiceDOM.fileName.style.color = 'var(--success-color)';
+        }
+
+        function setupDragDrop() {
+            const fileLabel = document.querySelector('.voiceclone-file-label');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+                fileLabel.addEventListener(event, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+
+            ['dragenter', 'dragover'].forEach(event => {
+                fileLabel.addEventListener(event, () => {
+                    fileLabel.style.background = '#f0f4ff';
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(event => {
+                fileLabel.addEventListener(event, () => {
+                    fileLabel.style.background = 'var(--light-bg)';
+                });
+            });
+
+            fileLabel.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                voiceDOM.customAudio.files = files;
+                handleFileSelect({ target: { files } });
+            });
+        }
+
+        // ==================== AUDIO GENERATION ====================
+        async function generatePresetAudio() {
+            if (!voiceDOM.presetText.value.trim()) {
+                showError('Please enter text to synthesize');
+                return;
+            }
+
+            const payload = {
+                mode: 'preset',
+                preset_id: voiceState.selectedPreset,
+                text_to_synthesize: voiceDOM.presetText.value
+            };
+
+            await sendRequest(payload);
+        }
+
+        async function generateCustomAudio() {
+            if (!voiceState.customFile) {
+                showError('Please upload an audio file');
+                return;
+            }
+
+            if (!voiceDOM.customText.value.trim()) {
+                showError('Please enter text to synthesize');
+                return;
+            }
+
+            const base64 = await fileToBase64(voiceState.customFile);
+            const payload = {
+                mode: 'custom',
+                audio_base64: base64,
+                prompt_text: voiceDOM.customPrompt.value,
+                text_to_synthesize: voiceDOM.customText.value
+            };
+
+            await sendRequest(payload);
+        }
+
+        async function sendRequest(payload) {
+            if (voiceState.isProcessing) {
+                showError('A request is already processing');
+                return;
+            }
+
+            voiceState.isProcessing = true;
+            showStatus('Sending request to RunPod...');
+
+            try {
+                const url = `${VOICE_CONFIG.apiUrl}/${VOICE_CONFIG.endpoint}/run`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (!data.id) throw new Error('No job ID');
+
+                voiceState.currentJobId = data.id;
+                showStatus(`Job queued (${data.id.substring(0, 8)}...) - Waiting...`);
+                await pollJob();
+
+            } catch (error) {
+                showError(`Request failed: ${error.message}`);
+                voiceState.isProcessing = false;
+            }
+        }
+
+        async function pollJob() {
+            let count = 0;
+
+            while (count < VOICE_CONFIG.maxPolls) {
+                try {
+                    const url = `${VOICE_CONFIG.apiUrl}/${VOICE_CONFIG.endpoint}/status/${voiceState.currentJobId}`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    const status = data.status || data.state;
+
+                    if (status === 'COMPLETED') {
+                        if (data.output?.audio_base64) {
+                            handleSuccess(data.output);
+                        } else {
+                            showError('No audio in response');
+                        }
+                        voiceState.isProcessing = false;
+                        return;
+                    }
+
+                    if (status === 'FAILED') {
+                        showError(`Job failed: ${data.output?.error || 'Unknown error'}`);
+                        voiceState.isProcessing = false;
+                        return;
+                    }
+
+                    showStatus(`Processing... (${count}s)`);
+                    count++;
+                    await new Promise(r => setTimeout(r, VOICE_CONFIG.pollInterval));
+
+                } catch (error) {
+                    showError(`Polling error: ${error.message}`);
+                    voiceState.isProcessing = false;
+                    return;
+                }
+            }
+
+            showError('Job timeout (5 min exceeded)');
+            voiceState.isProcessing = false;
+        }
+
+        function handleSuccess(output) {
+            try {
+                const audioBlob = base64ToBlob(output.audio_base64, 'audio/wav');
+                const audioUrl = URL.createObjectURL(audioBlob);
+
+                voiceDOM.resultAudio.src = audioUrl;
+                voiceDOM.playerBox.classList.add('active');
+
+                voiceState.generatedAudio = { blob: audioBlob, url: audioUrl };
+
+                if (output.metadata) {
+                    displayMetadata(output.metadata);
+                }
+
+                updateStatusSuccess('Audio Generated Successfully!');
+
+                setTimeout(() => {
+                    voiceDOM.playerBox.scrollIntoView({ behavior: 'smooth' });
+                }, 300);
+
+            } catch (error) {
+                showError(`Audio processing failed: ${error.message}`);
+            }
+        }
+
+        function displayMetadata(meta) {
+            const items = [
+                meta.duration_seconds && `Duration: ${meta.duration_seconds.toFixed(2)}s`,
+                meta.sample_rate && `Rate: ${meta.sample_rate}Hz`,
+                meta.mode && `Mode: ${meta.mode}`
+            ].filter(Boolean);
+
+            voiceDOM.metadata.innerHTML = items.map(item => {
+                const [label, value] = item.split(': ');
+                return `<div class="voiceclone-meta-item"><span class="voiceclone-meta-label">${label}:</span> ${value}</div>`;
+            }).join('');
+        }
+
+        function downloadAudio() {
+            if (!voiceState.generatedAudio) return;
+            const link = document.createElement('a');
+            link.href = voiceState.generatedAudio.url;
+            link.download = `voice_${Date.now()}.wav`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // ==================== STATUS DISPLAY ====================
+        function showStatus(message) {
+            voiceDOM.statusBox.classList.add('active');
+            voiceDOM.statusBox.classList.remove('success', 'error');
+            voiceDOM.statusTitle.textContent = 'Processing...';
+            voiceDOM.statusMessage.textContent = message;
+        }
+
+        function showError(message) {
+            voiceDOM.statusBox.classList.add('active', 'error');
+            voiceDOM.statusBox.classList.remove('success');
+            voiceDOM.statusTitle.textContent = '✗ Error';
+            voiceDOM.statusMessage.innerHTML = `<span class="voiceclone-badge voiceclone-badge-error">${message}</span>`;
+        }
+
+        function updateStatusSuccess(message) {
+            voiceDOM.statusBox.classList.add('active', 'success');
+            voiceDOM.statusBox.classList.remove('error');
+            voiceDOM.statusTitle.textContent = `✓ ${message}`;
+            voiceDOM.statusMessage.innerHTML = '<span class="voiceclone-badge voiceclone-badge-success">Ready to play or download</span>';
+        }
+
+        // ==================== UTILITY FUNCTIONS ====================
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function base64ToBlob(base64, type) {
+            const bytes = atob(base64);
+            const arr = new Uint8Array(bytes.length);
+            for (let i = 0; i < bytes.length; i++) {
+                arr[i] = bytes.charCodeAt(i);
+            }
+            return new Blob([arr], { type });
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // ==================== START ====================
+        document.addEventListener('DOMContentLoaded', initVoiceTool);
+    </script>
+</body>
+</html>
