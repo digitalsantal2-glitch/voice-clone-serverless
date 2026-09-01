@@ -5,11 +5,20 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y git ffmpeg libsndfile1 && rm -rf /var/lib/apt/lists/*
+# 👇 यहाँ build-essential gcc g++ जोड़ दिया गया है (C Compiler)
+RUN apt-get update && apt-get install -y \
+    git \
+    ffmpeg \
+    libsndfile1 \
+    build-essential \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir voxcpm soundfile runpod huggingface_hub
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# HuggingFace से Model फाइल्स डाउनलोड करें (बिना GPU एरर के)
+# Model Files Download
 RUN python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='openbmb/VoxCPM2')"
 
 COPY handler.py /app/handler.py
