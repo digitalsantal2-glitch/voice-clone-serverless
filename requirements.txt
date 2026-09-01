@@ -1,7 +1,7 @@
 runpod
-soundfile
 torch>=2.2.0
 torchaudio
+soundfile
 transformers
 accelerate
 descript-audiotools
