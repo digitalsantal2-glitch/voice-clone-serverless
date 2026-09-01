@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
+FROM pytorch/pytorch:2.4.0-cuda12.4-cudnn9-runtime
 
 WORKDIR /app
 
@@ -10,11 +10,9 @@ RUN apt-get update && apt-get install -y git ffmpeg libsndfile1 && rm -rf /var/l
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# S2-Pro Model Download
+# Model पहले ही डाउनलोड कर लें ताकि चालू होने में 0 सेकंड लगे
 RUN python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='fishaudio/s2-pro', local_dir='/app/checkpoints/s2-pro')"
 
 COPY handler.py /app/handler.py
-# आपकी प्रीसेट ऑडियो फाइलें कॉपी करने के लिए (अगर हों)
-RUN mkdir -p /app/presets
 
-CMD ["python", "-u", "handler.py"]
+CMD ["python", "-u", "/app/handler.py"]
