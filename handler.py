@@ -6,16 +6,16 @@ import soundfile as sf
 import runpod
 from voxcpm import VoxCPM
 
-print("Loading OpenBMB VoxCPM Model...")
-# Official OpenBMB VoxCPM Model
+print("Loading OpenBMB VoxCPM2 AI Model...")
+# GPU चालू होने पर यहाँ लोड होगा
 model = VoxCPM.from_pretrained("openbmb/VoxCPM2", load_denoiser=False)
-print("OpenBMB VoxCPM Ready!")
+print("OpenBMB VoxCPM2 Ready!")
 
 def handler(job):
     job_input = job.get('input', {})
-    text = job_input.get('text', '')                    # नया डायलॉग
-    prompt_text = job_input.get('prompt_text', '')      # Voice फ़ाइल में बोला गया exact text
-    ref_audio_b64 = job_input.get('reference_audio', '')# आपकी ऑडियो फ़ाइल
+    text = job_input.get('text', '')                    # नया टेक्स्ट/डायलॉग
+    prompt_text = job_input.get('prompt_text', '')      # ऑडियो में बोला गया exact text
+    ref_audio_b64 = job_input.get('reference_audio', '')# ऑडियो फाइल (Base64)
 
     if not text:
         return {"error": "Text is required"}
@@ -28,7 +28,7 @@ def handler(job):
                 tmp.write(audio_bytes)
                 ref_path = tmp.name
 
-        # OpenBMB VoxCPM Voice Cloning
+        # OpenBMB VoxCPM2 Voice Cloning
         if ref_path:
             wav = model.generate(
                 text=text,
@@ -45,7 +45,7 @@ def handler(job):
                 inference_timesteps=10
             )
 
-        # Output to Base64 WAV
+        # 48kHz WAV Output
         buf = io.BytesIO()
         sample_rate = getattr(model.tts_model, "sample_rate", 48000)
         sf.write(buf, wav, sample_rate, format='WAV')
