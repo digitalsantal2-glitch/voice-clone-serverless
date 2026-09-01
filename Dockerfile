@@ -15,13 +15,13 @@ RUN apt-get update && apt-get install -y \
     ninja-build \
     && rm -rf /var/lib/apt/lists/*
 
-# Fish Speech 1.5 का स्टेबल वर्जन क्लोन और इंस्टॉल करें
+# Fish Speech 1.5 का स्टेबल वर्जन इंस्टॉल करें
 RUN git clone --branch v1.5.0 https://github.com/fishaudio/fish-speech.git /app/fish-speech && \
     cd /app/fish-speech && \
     pip install --no-cache-dir -e . && \
     pip install --no-cache-dir runpod soundfile requests
 
-# Model Download (Lightweight 1.5GB)
+# Fish Speech 1.5 Model Download (1.5GB)
 RUN python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='fishaudio/fish-speech-1.5', local_dir='/app/checkpoints/fish-speech-1.5')"
 
 # तीनों ऑडियो फाइल्स को प्री-डाउनलोड करें
