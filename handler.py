@@ -6,34 +6,18 @@ import torch
 import runpod
 from fish_speech.utils.schema import ServeTTSRequest, ServeReferenceAudio
 from fish_speech.models.text2semantic.inference import launch_thread_safe_queue
-from fish_speech.models.vqgan.inference import load_model as load_decoder_model
+from fish_speech.models.dac.inference import load_model as load_decoder_model
 from fish_speech.inference_engine import TTSInferenceEngine
 
-print("1. Loading Fish Speech 1.5 Engine...")
+print("1. Loading S2-Pro Engine...")
 device = "cuda" if torch.cuda.is_available() else "cpu"
 precision = torch.bfloat16 if torch.cuda.is_available() else torch.float32
 
-# Load 1.5 Model Architecture
-llama_queue = launch_thread_safe_queue(
-    checkpoint_path="/app/checkpoints/fish-speech-1.5",
-    device=device,
-    precision=precision,
-    compile=False
-)
-
-decoder_model = load_decoder_model(
-    config_name="firefly_gan_vq",
-    checkpoint_path="/app/checkpoints/fish-speech-1.5/firefly-gan-vq-fsq-8x1024-21hz-generator.pth",
-    device=device
-)
-
-engine = TTSInferenceEngine(
-    llama_queue=llama_queue,
-    decoder_model=decoder_model,
-    precision=precision,
-    compile=False
-)
-print("2. Fish Speech 1.5 Engine is Ready!")
+# Load Exact S2-Pro Architecture (कल वाला)
+q = launch_thread_safe_queue("/app/checkpoints/s2-pro", device=device, precision=precision, compile=False)
+dec = load_decoder_model(config_name="modded_dac_vq", checkpoint_path="/app/checkpoints/s2-pro/codec.pth", device=device)
+engine = TTSInferenceEngine(llama_queue=q, decoder_model=dec, precision=precision, compile=False)
+print("2. S2-Pro Voice Engine is 100% Ready!")
 
 COMMON_PROMPT = "मेरे हौसले की उड़ान अब कम नहीं होगी, मेरे जिद की जिद खत्म नहीं होगी। अब पूरा हिंदुस्तान जीतूंगा सिकंदर बनकर। यह ऐलान-ए-जंग खुली आम होगा, पूरे इंडिया में, सरेआम होगा! एक दमदार प्रस्तुति के लिए तैयार हो जाइए।"
 
@@ -67,7 +51,7 @@ def handler(job):
         audio_bytes = None
         clean_prompt = prompt_text
 
-        # 1. Preset Mode
+        # 1. Preset Voice Mode
         if mode == 'preset':
             preset_info = PRESETS.get(preset_name, PRESETS["voice1"])
             with open(preset_info["file"], "rb") as f:
