@@ -1,20 +1,33 @@
-runpod
-soundfile
-torch>=2.2.0
-torchaudio
-transformers
-accelerate
-descript-audiotools
-descript-audio-codec
-silero-vad
-einops
-lightning
-natsort
-hydra-core
-omegaconf
-tiktoken
-sentencepiece
-loralib
-pyrootutils
-einx
-git+https://github.com/fishaudio/fish-speech.git
+# Core dependencies
+torch==2.4.0
+torchaudio==2.4.0
+numpy>=1.24.0,<2.0.0
+scipy>=1.10.0
+
+# RunPod Serverless
+runpod>=1.5.0
+
+# Audio processing
+soundfile>=0.12.1
+librosa>=0.10.0
+audioread>=3.1.0
+pydub>=0.25.1
+
+# Model loading and HuggingFace integration
+huggingface_hub>=0.17.0
+transformers>=4.35.0
+omegaconf>=2.3.0
+hydra-core>=1.3.0
+
+# Fish Speech specific (will be installed via git clone)
+# But we pre-list key dependencies it needs:
+pyyaml>=6.0
+requests>=2.31.0
+einops>=0.7.0
+jinja2>=3.1.0
+pydantic>=2.0.0
+
+# Development and utility
+click>=8.1.0
+tqdm>=4.66.0
+python-dotenv>=1.0.0
