@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y git ffmpeg libsndfile1 && rm -rf /var/l
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Model पहले ही डाउनलोड कर लें ताकि चालू होने में 0 सेकंड लगे
-RUN python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='fishaudio/s2-pro', local_dir='/app/checkpoints/s2-pro')"
+# OpenBMB VoxCPM Model Download
+RUN python -c "from voxcpm import VoxCPM; VoxCPM.from_pretrained('openbmb/VoxCPM2', load_denoiser=False)"
 
 COPY handler.py /app/handler.py
 
