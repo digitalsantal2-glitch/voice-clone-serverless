@@ -2,76 +2,69 @@
 FROM pytorch/pytorch:2.4.0-cuda12.4-cudnn9-runtime
 
 # Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    DEBIAN_FRONTEND=noninteractive \
-    PATH="/app:$PATH" \
-    FISH_SPEECH_HOME=/app/models
+ENV PYTHONUNBUFFERED=1 DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    cmake \
-    ninja-build \
-    git \
-    curl \
-    wget \
-    ca-certificates \
-    ffmpeg \
-    libsndfile1 \
-    libsndfile1-dev \
-    sox \
-    libsox-dev \
-    pkg-config \
+    build-essential cmake ninja-build git curl wget ca-certificates \
+    ffmpeg libsndfile1 libsndfile1-dev sox libsox-dev pkg-config \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better layer caching
-COPY requirements.txt /app/
-
-# Upgrade pip and install Python dependencies
+# Copy and install Python dependencies
+COPY requirements.txt .
 RUN pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r /app/requirements.txt
+    pip install --no-cache-dir -r requirements.txt
 
-# Create directory structure
-RUN mkdir -p /app/presets /app/models /app/models/fish-speech-1.5
+# Create directories
+RUN mkdir -p /app/presets /app/models/fish-speech-1.5
 
-# Clone Fish Speech repository ONLY (skip model download in build)
-RUN git clone --depth 1 https://github.com/fishaudio/fish-speech.git /app/fish-speech && \
-    cd /app/fish-speech && \
-    pip install --no-cache-dir -e . 2>&1 | head -50 || true
+# Clone Fish Speech (minimal, no pip install -e to avoid conflicts)
+RUN git clone --depth 1 https://github.com/fishaudio/fish-speech.git /app/fish-speech
 
-# Download ONLY the 3 preset voices (lightweight, ~50-100MB total)
-RUN echo "Downloading preset voices..." && \
-    wget --timeout=30 -q -O /app/presets/voice_1.wav https://files.catbox.moe/b1vfng.wav 2>&1 || echo "Warning: voice_1 download failed" && \
-    wget --timeout=30 -q -O /app/presets/voice_2.mp3 https://files.catbox.moe/i87vs7.mp3 2>&1 || echo "Warning: voice_2 download failed" && \
-    wget --timeout=30 -q -O /app/presets/voice_3.mp3 https://files.catbox.moe/gr8o75.mp3 2>&1 || echo "Warning: voice_3 download failed"
+# Try to install fish-speech (if it fails, continue anyway)
+RUN cd /app/fish-speech && pip install -e . 2>&1 || echo "Fish Speech install had issues, will handle at runtime"
 
-# Convert MP3 to WAV only if files exist
-RUN bash -c 'if [ -f /app/presets/voice_2.mp3 ]; then ffmpeg -i /app/presets/voice_2.mp3 -acodec pcm_s16le -ar 44100 /app/presets/voice_2.wav -y 2>/dev/null && rm /app/presets/voice_2.mp3; fi' && \
-    bash -c 'if [ -f /app/presets/voice_3.mp3 ]; then ffmpeg -i /app/presets/voice_3.mp3 -acodec pcm_s16le -ar 44100 /app/presets/voice_3.wav -y 2>/dev/null && rm /app/presets/voice_3.mp3; fi'
+# Download preset voices (non-blocking)
+RUN wget --timeout=30 -q -O /app/presets/voice_1.wav https://files.catbox.moe/b1vfng.wav 2>&1 || true && \
+    wget --timeout=30 -q -O /app/presets/voice_2.mp3 https://files.catbox.moe/i87vs7.mp3 2>&1 || true && \
+    wget --timeout=30 -q -O /app/presets/voice_3.mp3 https://files.catbox.moe/gr8o75.mp3 2>&1 || true
 
-# Copy handler script
-COPY handler.py /app/
+# Convert MP3 to WAV if they exist
+RUN if [ -f /app/presets/voice_2.mp3 ]; then ffmpeg -i /app/presets/voice_2.mp3 -acodec pcm_s16le -ar 44100 /app/presets/voice_2.wav -y 2>/dev/null; rm -f /app/presets/voice_2.mp3; fi
 
-# Create a startup script that downloads models on first run
-RUN mkdir -p /app/scripts && \
-    cat > /app/scripts/startup.sh << 'STARTUP_EOF'
-#!/bin/bash
-set -e
+RUN if [ -f /app/presets/voice_3.mp3 ]; then ffmpeg -i /app/presets/voice_3.mp3 -acodec pcm_s16le -ar 44100 /app/presets/voice_3.wav -y 2>/dev/null; rm -f /app/presets/voice_3.mp3; fi
 
-echo "[INFO] Checking if models need to be downloaded..."
+# Copy handler
+COPY handler.py /app/handler.py
 
-if [ ! -f "/app/models/fish-speech-1.5/model.pth" ]; then
-    echo "[INFO] Downloading Fish Speech 1.5 models..."
-    python -c "from huggingface_hub import snapshot_download; snapshot_download('fishaudio/fish-speech-1.5', local_dir='/app/models/fish-speech-1.5', ignore_patterns=['*.git*', '*.md'])" || echo "[WARNING] Model download may retry at runtime"
-fi
+# Create startup wrapper script as separate file
+RUN cat > /app/start.py << 'PYEOF'
+#!/usr/bin/env python3
+import os
+import sys
+import subprocess
 
-echo "[INFO] Starting handler..."
-exec python -u /app/handler.py
-STARTUP_EOF
+# Download models at startup if they don't exist
+model_path = "/app/models/fish-speech-1.5/model.pth"
+if not os.path.exists(model_path):
+    print("[INFO] Downloading Fish Speech 1.5 models...")
+    try:
+        from huggingface_hub import snapshot_download
+        snapshot_download('fishaudio/fish-speech-1.5', 
+                         local_dir='/app/models/fish-speech-1.5',
+                         ignore_patterns=['*.git*', '*.md'])
+        print("[INFO] Models downloaded successfully")
+    except Exception as e:
+        print(f"[WARNING] Model download failed: {e}, will attempt at runtime")
 
-RUN chmod +x /app/scripts/startup.sh
+# Start handler
+print("[INFO] Starting RunPod handler...")
+os.execvp('python', ['python', '-u', '/app/handler.py'])
+PYEOF
+
+RUN chmod +x /app/start.py
 
 # Entrypoint
-CMD ["/app/scripts/startup.sh"]
+CMD ["python", "/app/start.py"]
